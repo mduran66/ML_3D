@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mercado Libre · Mock Producto 3D/AR (Zapatillas)</title>
+  <!-- Visor 3D/AR -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5; }
@@ -56,9 +57,12 @@
             <div class="badge">NUEVO</div>
             <div class="badge">3D / AR</div>
           </div>
-          <img id="hero" alt="Zapatillas Runner Pro 4D - imagen" src="https://modelviewer.dev/shared-assets/models/ShopifyModels/ShopifyShoe.png" />
-          <p class="hint">Simulación visual de una ficha real de Mercado Libre · Imagen 2D y 3D corresponden al mismo producto</p>
+          <!-- IMAGEN 2D del MISMO producto que el 3D -->
+          <img id="hero" alt="Zapatillas Runner Pro 4D - imagen"
+               src="https://modelviewer.dev/shared-assets/models/ShopifyModels/ShopifyShoe.png" />
+          <p class="hint">Simulación de ficha ML · Imagen 2D y modelo 3D son el mismo producto</p>
         </div>
+
         <div class="details">
           <h1>Zapatillas Runner Pro 4D</h1>
           <div class="price">$ 89.999</div>
@@ -68,13 +72,14 @@
             <button class="btn btn-secondary" id="toggle3d">👓 Ver en 3D</button>
           </div>
           <ul class="tips">
-            <li>AR con <strong>escala real fija</strong>: tamaño 1:1 en tu espacio.</li>
-            <li>Colocación sobre superficies planas (mesa/suelo).</li>
+            <li>AR con <strong>escala real fija</strong> (1:1).</li>
+            <li>Colocar sobre mesa o suelo; no se puede redimensionar en AR.</li>
           </ul>
         </div>
       </div>
 
       <div id="viewerWrap">
+        <!-- MISMO producto en 3D. Android/WebXR usa GLB; iOS usa USDZ. -->
         <model-viewer id="mv"
           src="https://modelviewer.dev/shared-assets/models/ShopifyModels/ShopifyShoe.glb"
           ios-src="https://modelviewer.dev/shared-assets/models/ShopifyModels/ShopifyShoe.usdz#allowsContentScaling=0"
@@ -88,7 +93,7 @@
           <button slot="ar-button" class="btn btn-primary">Ver en tu espacio (AR)</button>
         </model-viewer>
         <div class="ar-cta">
-          <span class="note">Si tu teléfono no soporta AR, podés rotar/zoom en 3D. En iOS, el objeto no puede escalarse (escala fija).</span>
+          <span class="note">Si el teléfono no soporta AR, igual podés rotar/zoom en 3D.</span>
         </div>
       </div>
 
@@ -106,7 +111,7 @@
       const isOpen = wrap.style.display === 'block';
       wrap.style.display = isOpen ? 'none' : 'block';
       toggle.textContent = isOpen ? '👓 Ver en 3D' : '🧭 Volver a fotos';
-      if (!isOpen) { wrap.scrollIntoView({behavior:'smooth'}); }
+      if (!isOpen) wrap.scrollIntoView({behavior:'smooth'});
     });
   </script>
 </body>

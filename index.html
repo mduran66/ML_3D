@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mercado Libre · Mock 3D (100% sin imágenes ni descargas)</title>
+  <title>Mercado Libre · Mock 3D (sin descargas)</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5; }
-    *{ box-sizing:border-box } body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--ml-text); background:var(--ml-bg); }
+    *{ box-sizing:border-box } body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--ml-text); background:var(--ml-bg); }
     header{ background:var(--ml-yellow); padding:14px 16px; position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center;}
     header .logo{ width:124px; height:24px; background:#000; color:#fff; border-radius:4px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;}
     header input{ flex:1; border:none; border-radius:6px; padding:10px 12px; outline:none; }
@@ -42,4 +42,140 @@
   <section class="product-card">
     <div class="product-top">
       <div class="media">
-        <div class="badges"><div class="badge">NUEVO</div><div class="badge">
+        <div class="badges"><div class="badge">NUEVO</div><div class="badge">3D</div></div>
+
+        <!-- “Foto” 2D: el mismo modelo 3D generado en memoria (sin imágenes ni archivos externos) -->
+        <model-viewer id="heroMV"
+          camera-controls="false" interaction-prompt="none" ar="false"
+          environment-image="neutral" exposure="1.0" shadow-intensity="0.9"
+          min-camera-orbit="0deg 65deg 1.2m" max-camera-orbit="0deg 65deg 1.2m" auto-rotate="false">
+        </model-viewer>
+        <p class="hint">Imagen superior generada del mismo 3D embebido (sin PNG/JPG).</p>
+      </div>
+
+      <div class="details">
+        <h1>Objeto demo tamaño “zapatilla”</h1>
+        <div class="price">$ 19.999</div>
+        <p>Escala real fija 1:1 • Colocar en mesa (AR se activa cuando usemos archivo .glb/.usdz)</p>
+        <div class="btns">
+          <button class="btn btn-primary">Comprar ahora</button>
+          <button class="btn btn-secondary" id="toggle3d">👓 Ver en 3D</button>
+        </div>
+        <ul class="hint">
+          <li>Este `index` no descarga nada: genera el modelo en memoria.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="viewerWrap">
+      <!-- Visor interactivo (mismo modelo). AR desactivado en esta versión sin archivos externos. -->
+      <model-viewer id="arMV" camera-controls environment-image="neutral" exposure="1.0" shadow-intensity="0.9" autoplay>
+        <button slot="ar-button" class="btn btn-primary" disabled>Ver en tu espacio (AR)</button>
+      </model-viewer>
+      <div class="ar-cta"><span class="hint">AR nativo requiere alojar el 3D como archivo. Cuando lo subamos, activo este botón.</span></div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn btn-secondary">Agregar al carrito</button>
+      <button class="btn btn-primary">Comprar ahora</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* 
+  Genera un glTF 2.0 en memoria (sin archivos externos) y lo sirve vía blob: URL.
+  Es una “caja” metálica con tamaño 26×10×8 cm (similar a una zapatilla en volumen).
+*/
+(function(){
+  const L=0.26, W=0.10, H=0.08; // metros
+  const sx=L/2, sy=W/2, sz=H/2;
+
+  const faces = [
+    [[1,0,0],  [ [sx,-sy,-sz],[sx, sy,-sz],[sx, sy, sz],[sx,-sy, sz] ]],
+    [[-1,0,0], [ [-sx,-sy, sz],[-sx, sy, sz],[-sx, sy,-sz],[-sx,-sy,-sz] ]],
+    [[0,1,0],  [ [-sx, sy,-sz],[ sx, sy,-sz],[ sx, sy, sz],[-sx, sy, sz] ]],
+    [[0,-1,0], [ [-sx,-sy, sz],[ sx,-sy, sz],[ sx,-sy,-sz],[-sx,-sy,-sz] ]],
+    [[0,0,1],  [ [-sx,-sy, sz],[ sx,-sy, sz],[ sx, sy, sz],[-sx, sy, sz] ]],
+    [[0,0,-1], [ [-sx, sy,-sz],[ sx, sy,-sz],[ sx,-sy,-sz],[-sx,-sy,-sz] ]],
+  ];
+
+  const positions=[], normals=[], indices=[];
+  let base=0;
+  for(const [n, corners] of faces){
+    for(const c of corners){ positions.push(...c); normals.push(...n); }
+    indices.push(base,base+1,base+2, base,base+2,base+3);
+    base+=4;
+  }
+
+  // --- empaquetar binarios ---
+  function f32(arr){ const b=new ArrayBuffer(arr.length*4); new Float32Array(b).set(arr); return b; }
+  function u16(arr){ const b=new ArrayBuffer(arr.length*2); new Uint16Array(b).set(arr); return b; }
+
+  const posBytes=f32(positions);
+  const norBytes=f32(normals);
+  const idxBytes=u16(indices);
+
+  // concatenar buffers con alineación a 4 bytes
+  function concatAligned(buffers){
+    let total=0, parts=[];
+    for(const b of buffers){
+      const pad=(4-(b.byteLength%4))%4;
+      parts.push(b, new ArrayBuffer(pad));
+      total+=b.byteLength+pad;
+    }
+    const out=new Uint8Array(total);
+    let off=0;
+    for(const p of parts){ out.set(new Uint8Array(p), off); off+=p.byteLength; }
+    return out.buffer;
+  }
+
+  const bin = concatAligned([posBytes, norBytes, idxBytes]);
+
+  const posOffset = 0;
+  const norOffset = posBytes.byteLength + ((4 - (posBytes.byteLength%4))%4);
+  const idxOffset = norOffset + norBytes.byteLength + ((4 - (norBytes.byteLength%4))%4);
+
+  const bufferBlob = new Blob([bin], {type:"application/octet-stream"});
+  const bufferURL  = URL.createObjectURL(bufferBlob);
+
+  const gltf = {
+    asset:{version:"2.0"},
+    buffers:[{uri:bufferURL, byteLength:bin.byteLength}],
+    bufferViews:[
+      {buffer:0, byteOffset:posOffset, byteLength:posBytes.byteLength, target:34962},
+      {buffer:0, byteOffset:norOffset, byteLength:norBytes.byteLength, target:34962},
+      {buffer:0, byteOffset:idxOffset, byteLength:idxBytes.byteLength, target:34963},
+    ],
+    accessors:[
+      {bufferView:0, byteOffset:0, componentType:5126, count:24, type:"VEC3", min:[-sx,-sy,-sz], max:[sx,sy,sz]},
+      {bufferView:1, byteOffset:0, componentType:5126, count:24, type:"VEC3"},
+      {bufferView:2, byteOffset:0, componentType:5123, count:36, type:"SCALAR"},
+    ],
+    materials:[{pbrMetallicRoughness:{baseColorFactor:[0.2,0.2,0.22,1], metallicFactor:0.5, roughnessFactor:0.35}}],
+    meshes:[{primitives:[{attributes:{POSITION:0,NORMAL:1}, indices:2, material:0}]}],
+    nodes:[{mesh:0}],
+    scenes:[{nodes:[0]}],
+    scene:0
+  };
+
+  const gltfBlob = new Blob([JSON.stringify(gltf)], {type:"model/gltf+json"});
+  const gltfURL  = URL.createObjectURL(gltfBlob);
+
+  // asignar a ambos visores
+  document.getElementById('heroMV').src = gltfURL;
+  document.getElementById('arMV').src   = gltfURL;
+
+  // toggle 3D
+  const toggle = document.getElementById('toggle3d');
+  const wrap   = document.getElementById('viewerWrap');
+  toggle.addEventListener('click', ()=>{
+    const open = wrap.style.display === 'block';
+    wrap.style.display = open ? 'none' : 'block';
+    toggle.textContent = open ? '👓 Ver en 3D' : '🧭 Volver a fotos';
+    if(!open) wrap.scrollIntoView({behavior:'smooth'});
+  });
+})();
+</script>
+</body>
+</html>

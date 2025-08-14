@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mercado Libre · Mock 3D (sin descargas)</title>
+  <title>Mercado Libre · Mock 3D (sin descargas, escala fija)</title>
+  <!-- Única librería externa (el visor). Si tu red la bloquea, te paso versión inline. -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5; }
-    *{ box-sizing:border-box } body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--ml-text); background:var(--ml-bg); }
+    *{ box-sizing:border-box } body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--ml-text); background:var(--ml-bg); }
     header{ background:var(--ml-yellow); padding:14px 16px; position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center;}
     header .logo{ width:124px; height:24px; background:#000; color:#fff; border-radius:4px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;}
     header input{ flex:1; border:none; border-radius:6px; padding:10px 12px; outline:none; }
@@ -26,7 +27,6 @@
     model-viewer{ width:100%; background:#fff; border-radius:12px; --progress-bar-color: var(--ml-blue); }
     #heroMV{ height:54vh; pointer-events:none; border:1px solid #eee; }   /* “foto” sin controles */
     #arMV{ height:60vh; }
-    .ar-cta{ margin-top:10px; display:flex; gap:10px; align-items:center; }
     .footer-actions{ display:flex; gap:10px; padding:12px; border-top:1px solid #eee; background:#fff; }
     .footer-actions .btn{ flex:1; }
     @media (min-width:880px){ #heroMV{ height:58vh; } #arMV{ height:65vh; } .product-top{ grid-template-columns:1.1fr .9fr; gap:10px; } }
@@ -48,31 +48,37 @@
         <model-viewer id="heroMV"
           camera-controls="false" interaction-prompt="none" ar="false"
           environment-image="neutral" exposure="1.0" shadow-intensity="0.9"
-          min-camera-orbit="0deg 65deg 1.2m" max-camera-orbit="0deg 65deg 1.2m" auto-rotate="false">
+          min-camera-orbit="0deg 65deg 1.2m" max-camera-orbit="0deg 65deg 1.2m"
+          auto-rotate="false">
         </model-viewer>
         <p class="hint">Imagen superior generada del mismo 3D embebido (sin PNG/JPG).</p>
       </div>
 
       <div class="details">
-        <h1>Objeto demo tamaño “zapatilla”</h1>
+        <h1>Objeto demo (volumen tipo zapatilla)</h1>
         <div class="price">$ 19.999</div>
-        <p>Escala real fija 1:1 • Colocar en mesa (AR se activa cuando usemos archivo .glb/.usdz)</p>
+        <p>Escala fija 1:1 • Para AR real luego alojamos el .glb/.usdz</p>
         <div class="btns">
           <button class="btn btn-primary">Comprar ahora</button>
           <button class="btn btn-secondary" id="toggle3d">👓 Ver en 3D</button>
         </div>
         <ul class="hint">
-          <li>Este `index` no descarga nada: genera el modelo en memoria.</li>
+          <li>En 3D no se puede **hacer zoom** ni cambiar el tamaño (escala fija).</li>
         </ul>
       </div>
     </div>
 
     <div id="viewerWrap">
-      <!-- Visor interactivo (mismo modelo). AR desactivado en esta versión sin archivos externos. -->
-      <model-viewer id="arMV" camera-controls environment-image="neutral" exposure="1.0" shadow-intensity="0.9" autoplay>
+      <!-- Visor interactivo (escala fija: sin zoom y con distancia bloqueada) -->
+      <model-viewer id="arMV"
+        camera-controls
+        disable-zoom
+        min-camera-orbit="0deg 55deg 1.2m"
+        max-camera-orbit="0deg 55deg 1.2m"
+        environment-image="neutral" exposure="1.0" shadow-intensity="0.9" autoplay>
         <button slot="ar-button" class="btn btn-primary" disabled>Ver en tu espacio (AR)</button>
       </model-viewer>
-      <div class="ar-cta"><span class="hint">AR nativo requiere alojar el 3D como archivo. Cuando lo subamos, activo este botón.</span></div>
+      <p class="hint">AR nativo requiere alojar el 3D como archivo. Lo activamos cuando puedas subir un .glb/.usdz al repo.</p>
     </div>
 
     <div class="footer-actions">
@@ -83,9 +89,9 @@
 </main>
 
 <script>
-/* 
+/*
   Genera un glTF 2.0 en memoria (sin archivos externos) y lo sirve vía blob: URL.
-  Es una “caja” metálica con tamaño 26×10×8 cm (similar a una zapatilla en volumen).
+  Es una “caja” metálica con tamaño 26×10×8 cm, similar al volumen de una zapatilla.
 */
 (function(){
   const L=0.26, W=0.10, H=0.08; // metros
@@ -108,7 +114,7 @@
     base+=4;
   }
 
-  // --- empaquetar binarios ---
+  // empaquetar binarios
   function f32(arr){ const b=new ArrayBuffer(arr.length*4); new Float32Array(b).set(arr); return b; }
   function u16(arr){ const b=new ArrayBuffer(arr.length*2); new Uint16Array(b).set(arr); return b; }
 
@@ -116,7 +122,6 @@
   const norBytes=f32(normals);
   const idxBytes=u16(indices);
 
-  // concatenar buffers con alineación a 4 bytes
   function concatAligned(buffers){
     let total=0, parts=[];
     for(const b of buffers){
@@ -162,7 +167,7 @@
   const gltfBlob = new Blob([JSON.stringify(gltf)], {type:"model/gltf+json"});
   const gltfURL  = URL.createObjectURL(gltfBlob);
 
-  // asignar a ambos visores
+  // asignar a ambos visores (hero estático y visor 3D)
   document.getElementById('heroMV').src = gltfURL;
   document.getElementById('arMV').src   = gltfURL;
 

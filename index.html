@@ -1,83 +1,69 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mock 3D (escala fija total, sin descargas)</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
-    :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5; }
-    *{ box-sizing:border-box } body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--ml-text); background:var(--ml-bg); }
-    header{ background:var(--ml-yellow); padding:14px 16px; position:sticky; top:0; z-index:10; display:flex; gap:12px; align-items:center;}
-    header .logo{ width:124px; height:24px; background:#000; color:#fff; border-radius:4px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;}
-    header input{ flex:1; border:none; border-radius:6px; padding:10px 12px; outline:none; }
-    .container{ max-width:980px; margin:16px auto; padding:0 12px; }
-    .product-card{ background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.06); overflow:hidden;}
-    .product-top{ display:grid; grid-template-columns:1fr; }
-    .media,.details{ padding:16px; }
-    .badges{display:flex; gap:8px; margin:8px 0 12px;}
-    .badge{background:#eef3ff; color:#2b64d8; font-weight:600; font-size:12px; padding:6px 10px; border-radius:999px;}
-    h1{font-size:20px; margin:6px 0 8px;} .price{font-size:24px; font-weight:700; margin:6px 0 12px;}
-    .btns{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0;}
-    .btn{ padding:12px 14px; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
-    .btn-primary{ background:var(--ml-blue); color:#fff; } .btn-secondary{ background:#eef3ff; color:#2b64d8; }
-    .hint{font-size:12px; color:#666; margin-top:6px;}
-    #viewerWrap{ display:none; padding:12px; background:#fafafa; border-top:1px solid #eee; }
-    model-viewer{ width:100%; background:#fff; border-radius:12px; --progress-bar-color: var(--ml-blue); }
-    #heroMV{ height:54vh; pointer-events:none; border:1px solid #eee; }
-    #mv{ height:60vh; touch-action:none; } /* evita pinch del navegador */
-    .footer-actions{ display:flex; gap:10px; padding:12px; border-top:1px solid #eee; background:#fff; }
-    .footer-actions .btn{ flex:1; }
-    @media (min-width:880px){ #heroMV{ height:58vh; } #mv{ height:65vh; } .product-top{ grid-template-columns:1.1fr .9fr; gap:10px; } }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Mock 3D (escala fija, sin descargas)</title>
+<style>
+  :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5;}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--ml-bg);color:var(--ml-text)}
+  header{background:var(--ml-yellow);padding:14px 16px;position:sticky;top:0;z-index:10;display:flex;gap:12px;align-items:center}
+  header .logo{width:124px;height:24px;background:#000;color:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  header input{flex:1;border:none;border-radius:6px;padding:10px 12px;outline:none}
+  .container{max-width:980px;margin:16px auto;padding:0 12px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.06);overflow:hidden}
+  .grid{display:grid;grid-template-columns:1fr}
+  .pad{padding:16px}
+  h1{font-size:20px;margin:6px 0 8px}.price{font-size:24px;font-weight:700;margin:6px 0 12px}
+  .badges{display:flex;gap:8px;margin:8px 0 12px}
+  .badge{background:#eef3ff;color:#2b64d8;font-weight:600;font-size:12px;padding:6px 10px;border-radius:999px}
+  .hint{font-size:12px;color:#666;margin-top:6px}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+  .btn{padding:12px 14px;border:none;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--ml-blue);color:#fff}.btn-secondary{background:#eef3ff;color:#2b64d8}
+  .actions{display:flex;gap:10px;padding:12px;border-top:1px solid #eee;background:#fff}
+  .actions .btn{flex:1}
+  canvas{width:100%;height:60vh;display:block;border-radius:12px;background:#fff;touch-action:none}
+  #hero{height:54vh}
+  @media(min-width:880px){ .grid{grid-template-columns:1.1fr .9fr;gap:10px} #hero{height:58vh}}
+</style>
 </head>
 <body>
 <header>
   <div class="logo">ML Mock</div>
-  <input placeholder="Buscar productos, marcas y más…" aria-label="Buscar" />
+  <input placeholder="Buscar productos, marcas y más…" aria-label="Buscar"/>
 </header>
 
 <main class="container">
-  <section class="product-card">
-    <div class="product-top">
-      <div class="media">
+  <section class="card">
+    <div class="grid">
+      <div class="pad">
         <div class="badges"><div class="badge">NUEVO</div><div class="badge">3D</div></div>
-
-        <!-- “Foto” 2D: el mismo 3D embebido, sin controles -->
-        <model-viewer id="heroMV"
-          camera-controls="false" interaction-prompt="none" ar="false"
-          environment-image="neutral" exposure="1.0" shadow-intensity="0.9"
-          min-camera-orbit="auto auto 1.2m" max-camera-orbit="auto auto 1.2m"
-          min-field-of-view="30deg" max-field-of-view="30deg" auto-rotate="false">
-        </model-viewer>
-        <p class="hint">Imagen generada del mismo 3D embebido (sin PNG/JPG).</p>
+        <!-- “Foto” 3D sin controles (canvas estático) -->
+        <canvas id="hero" aria-label="Vista del producto"></canvas>
+        <p class="hint">Imagen superior renderizada en tiempo real (sin PNG/JPG ni descargas externas).</p>
       </div>
-
-      <div class="details">
+      <div class="pad">
         <h1>Objeto demo (volumen tipo zapatilla)</h1>
         <div class="price">$ 19.999</div>
-        <p>Escala fija 1:1 • Para AR real luego alojamos el .glb/.usdz</p>
+        <p>Escala fija 1:1 • Sin zoom/pan • Rotación únicamente</p>
         <div class="btns">
           <button class="btn btn-primary">Comprar ahora</button>
-          <button class="btn btn-secondary" id="toggle3d">👓 Ver en 3D</button>
+          <button class="btn btn-secondary" id="toggle">👓 Ver en 3D</button>
         </div>
-        <ul class="hint"><li>No se puede agrandar/achicar: tamaño bloqueado.</li></ul>
+        <ul class="hint">
+          <li>El tamaño NO cambia: zoom y pan deshabilitados a nivel de motor y eventos.</li>
+        </ul>
       </div>
     </div>
 
-    <div id="viewerWrap">
-      <!-- Visor 3D con escala fija total -->
-      <model-viewer id="mv"
-        camera-controls disable-zoom disable-pan
-        min-camera-orbit="auto auto 1.2m" max-camera-orbit="auto auto 1.2m"
-        min-field-of-view="30deg" max-field-of-view="30deg"
-        environment-image="neutral" exposure="1.0" shadow-intensity="0.9" autoplay>
-        <button slot="ar-button" class="btn btn-primary" disabled>Ver en tu espacio (AR)</button>
-      </model-viewer>
-      <p class="hint">AR nativo requiere alojar el 3D como archivo. Lo activamos cuando puedas subir un .glb/.usdz al repo.</p>
+    <div class="pad" id="viewerWrap" style="display:none;border-top:1px solid #eee;background:#fafafa">
+      <!-- Visor interactivo: solo rotación -->
+      <canvas id="viewer" aria-label="Visor 3D interactivo (rotación)"></canvas>
+      <p class="hint">Rotá con un dedo. Pinch, doble-tap y rueda están bloqueados.</p>
     </div>
 
-    <div class="footer-actions">
+    <div class="actions">
       <button class="btn btn-secondary">Agregar al carrito</button>
       <button class="btn btn-primary">Comprar ahora</button>
     </div>
@@ -85,65 +71,185 @@
 </main>
 
 <script>
-/* Genera un glTF (26×10×8 cm) en memoria y lo sirve vía blob: URL. */
-(function(){
-  const L=0.26, W=0.10, H=0.08; const sx=L/2, sy=W/2, sz=H/2;
-  const faces = [
-    [[1,0,0],[ [sx,-sy,-sz],[sx,sy,-sz],[sx,sy,sz],[sx,-sy,sz] ]],
-    [[-1,0,0],[ [-sx,-sy,sz],[-sx,sy,sz],[-sx,sy,-sz],[-sx,-sy,-sz] ]],
-    [[0,1,0],[ [-sx,sy,-sz],[sx,sy,-sz],[sx,sy,sz],[-sx,sy,sz] ]],
-    [[0,-1,0],[ [-sx,-sy,sz],[sx,-sy,sz],[sx,-sy,-sz],[-sx,-sy,-sz] ]],
-    [[0,0,1],[ [-sx,-sy,sz],[sx,-sy,sz],[sx,sy,sz],[-sx,sy,sz] ]],
-    [[0,0,-1],[ [-sx,sy,-sz],[sx,sy,-sz],[sx,-sy,-sz],[-sx,-sy,-sz] ]]
+/*
+  Mini motor WebGL sin dependencias:
+  - Renderiza un “cuerpo” con proporciones 26×10×8 cm (0.26×0.10×0.08 m).
+  - Luz básica y material PBR simplificado.
+  - Bloquea zoom/pan: no hay matrices de zoom, no hay cámara con rueda; sólo rotación sobre Y/X.
+  - Eventos de pinch/wheel/gesture cancelados.
+*/
+
+// ---------- utilidades ----------
+function mat4Identity(){return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]}
+function mat4Multiply(a,b){
+  const o=new Array(16);
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    o[r*4+c]=a[r*4+0]*b[0*4+c]+a[r*4+1]*b[1*4+c]+a[r*4+2]*b[2*4+c]+a[r*4+3]*b[3*4+c];
+  } return o;
+}
+function mat4Perspective(fovy,aspect,near,far){
+  const f=1/Math.tan(fovy/2), nf=1/(near-far);
+  return [f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,(2*far*near)*nf,0];
+}
+function mat4Translate(m,[x,y,z]){const t=mat4Identity(); t[12]=x;t[13]=y;t[14]=z; return mat4Multiply(m,t);}
+function mat4RotateX(m,a){const c=Math.cos(a),s=Math.sin(a); const r=[1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; return mat4Multiply(m,r);}
+function mat4RotateY(m,a){const c=Math.cos(a),s=Math.sin(a); const r=[c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]; return mat4Multiply(m,r);}
+function vec3Normalize([x,y,z]){const l=Math.hypot(x,y,z)||1; return [x/l,y/l,z/l]}
+
+// ---------- geometría: caja “zapatilla” 26×10×8 cm ----------
+function makeBoxGeometry(L=0.26,W=0.10,H=0.08){
+  const sx=L/2, sy=W/2, sz=H/2;
+  const positions=[
+    // +X
+    sx,-sy,-sz,  sx, sy,-sz,  sx, sy, sz,  sx,-sy, sz,
+    // -X
+    -sx,-sy, sz, -sx, sy, sz, -sx, sy,-sz, -sx,-sy,-sz,
+    // +Y
+    -sx, sy,-sz,  sx, sy,-sz,  sx, sy, sz, -sx, sy, sz,
+    // -Y
+    -sx,-sy, sz,  sx,-sy, sz,  sx,-sy,-sz, -sx,-sy,-sz,
+    // +Z
+    -sx,-sy, sz,  sx,-sy, sz,  sx, sy, sz, -sx, sy, sz,
+    // -Z
+    -sx, sy,-sz,  sx, sy,-sz,  sx,-sy,-sz, -sx,-sy,-sz
   ];
-  const positions=[], normals=[], indices=[]; let base=0;
-  for(const [n,corners] of faces){ for(const c of corners){positions.push(...c); normals.push(...n);} indices.push(base,base+1,base+2, base,base+2,base+3); base+=4; }
-  function f32(a){const b=new ArrayBuffer(a.length*4); new Float32Array(b).set(a); return b;}
-  function u16(a){const b=new ArrayBuffer(a.length*2); new Uint16Array(b).set(a); return b;}
-  const pos=f32(positions), nor=f32(normals), idx=u16(indices);
-  function concatAligned(arrs){let total=0,parts=[];for(const b of arrs){const pad=(4-(b.byteLength%4))%4;parts.push(b,new ArrayBuffer(pad));total+=b.byteLength+pad;}const out=new Uint8Array(total);let o=0;for(const p of parts){out.set(new Uint8Array(p),o);o+=p.byteLength;}return out.buffer;}
-  const bin=concatAligned([pos,nor,idx]);
-  const posOff=0, norOff=pos.byteLength+((4-(pos.byteLength%4))%4), idxOff=norOff+nor.byteLength+((4-(nor.byteLength%4))%4);
-  const bufURL=URL.createObjectURL(new Blob([bin],{type:"application/octet-stream"}));
-  const gltf={asset:{version:"2.0"},buffers:[{uri:bufURL,byteLength:bin.byteLength}],
-    bufferViews:[{buffer:0,byteOffset:posOff,byteLength:pos.byteLength,target:34962},{buffer:0,byteOffset:norOff,byteLength:nor.byteLength,target:34962},{buffer:0,byteOffset:idxOff,byteLength:idx.byteLength,target:34963}],
-    accessors:[{bufferView:0,byteOffset:0,componentType:5126,count:24,type:"VEC3",min:[-sx,-sy,-sz],max:[sx,sy,sz]},{bufferView:1,byteOffset:0,componentType:5126,count:24,type:"VEC3"},{bufferView:2,byteOffset:0,componentType:5123,count:36,type:"SCALAR"}],
-    materials:[{pbrMetallicRoughness:{baseColorFactor:[0.2,0.2,0.22,1],metallicFactor:0.5,roughnessFactor:0.35}}],meshes:[{primitives:[{attributes:{POSITION:0,NORMAL:1},indices:2,material:0}]}],nodes:[{mesh:0}],scenes:[{nodes:[0]}],scene:0};
-  const gltfURL=URL.createObjectURL(new Blob([JSON.stringify(gltf)],{type:"model/gltf+json"}));
+  const normals=[
+    // +X
+    1,0,0, 1,0,0, 1,0,0, 1,0,0,
+    // -X
+    -1,0,0,-1,0,0,-1,0,0,-1,0,0,
+    // +Y
+    0,1,0,0,1,0,0,1,0,0,1,0,
+    // -Y
+    0,-1,0,0,-1,0,0,-1,0,0,-1,0,
+    // +Z
+    0,0,1,0,0,1,0,0,1,0,0,1,
+    // -Z
+    0,0,-1,0,0,-1,0,0,-1,0,0,-1
+  ];
+  const indices=[];
+  for(let i=0;i<6;i++){ const b=i*4; indices.push(b,b+1,b+2, b,b+2,b+3); }
+  return {positions:new Float32Array(positions), normals:new Float32Array(normals), indices:new Uint16Array(indices)};
+}
 
-  // asignar a ambos visores
-  document.getElementById('heroMV').src = gltfURL;
-  const mv = document.getElementById('mv');
-  mv.src = gltfURL;
+// ---------- render ----------
+function startViewer(canvas, allowRotate=true){
+  const gl=canvas.getContext('webgl',{antialias:true,alpha:false});
+  if(!gl){ canvas.insertAdjacentHTML('afterend','<div style="color:#b00">Este dispositivo no soporta WebGL</div>'); return;}
+  const vs=`
+  attribute vec3 position;
+  attribute vec3 normal;
+  uniform mat4 uMVP;
+  uniform mat4 uModel;
+  varying vec3 vN, vP;
+  void main(){
+    vN = mat3(uModel) * normal;
+    vP = (uModel * vec4(position,1.0)).xyz;
+    gl_Position = uMVP * vec4(position,1.0);
+  }`;
+  const fs=`
+  precision mediump float;
+  varying vec3 vN, vP;
+  uniform vec3 uCam, uColor;
+  void main(){
+    vec3 N = normalize(vN);
+    vec3 L = normalize(vec3(0.4,0.8,0.6));
+    vec3 V = normalize(uCam - vP);
+    vec3 H = normalize(L+V);
+    float diff = max(dot(N,L), 0.0);
+    float spec = pow(max(dot(N,H),0.0), 32.0);
+    vec3 base = uColor * (0.15 + 0.85*diff) + vec3(0.25)*spec;
+    gl_FragColor = vec4(base,1.0);
+  }`;
+  function compile(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s;}
+  const prog=gl.createProgram(); gl.attachShader(prog,compile(gl.VERTEX_SHADER,vs)); gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)) throw gl.getProgramInfoLog(prog);
+  gl.useProgram(prog);
 
-  // === Candados adicionales de tamaño ===
-  const FIX_RADIUS = '1.2m';
-  const FIX_FOV = '30deg';
+  const {positions,normals,indices}=makeBoxGeometry();
+  function buf(arr,loc,size,type){ const b=gl.createBuffer(); gl.bindBuffer(type,b); gl.bufferData(type,arr,gl.STATIC_DRAW); if(type===gl.ARRAY_BUFFER){ gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,size,gl.FLOAT,false,0,0);} return b;}
+  const locPos=gl.getAttribLocation(prog,'position'), locNor=gl.getAttribLocation(prog,'normal');
+  buf(positions, locPos, 3, gl.ARRAY_BUFFER);
+  buf(normals,   locNor, 3, gl.ARRAY_BUFFER);
+  const ibo=buf(indices, 0, 0, gl.ELEMENT_ARRAY_BUFFER);
 
-  // Aplica valores fijos
-  function lockSize() {
-    const o = mv.getCameraOrbit();
-    mv.cameraOrbit = `${o.theta} ${o.phi} ${FIX_RADIUS}`;
-    mv.fieldOfView = FIX_FOV;
+  const uMVP=gl.getUniformLocation(prog,'uMVP');
+  const uModel=gl.getUniformLocation(prog,'uModel');
+  const uCam=gl.getUniformLocation(prog,'uCam');
+  const uColor=gl.getUniformLocation(prog,'uColor');
+
+  function resize(){
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = canvas.clientWidth|0, h = canvas.clientHeight|0;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    gl.viewport(0,0,canvas.width,canvas.height);
   }
+  resize(); window.addEventListener('resize', resize);
 
-  // Bloquea cambios cada vez que el usuario intenta interactuar
-  mv.addEventListener('camera-change', lockSize);
-  mv.addEventListener('load', lockSize);
+  let rotX = 0.6, rotY = 0.6; // orientación inicial
+  const radius = 0.7;         // distancia de cámara fija (TAMAÑO FIJO)
+  const fov = 45 * Math.PI/180; // FOV fijo
 
-  // Cancela gestos que algunos navegadores usan para “quick zoom”
-  ['wheel','dblclick','gesturestart','gesturechange','gestureend'].forEach(evt=>{
-    mv.addEventListener(evt, e=>{ e.preventDefault(); lockSize(); }, {passive:false});
-  });
-
-  // Pinch de 2 dedos → cancelar y restaurar
-  mv.addEventListener('touchmove', e=>{
-    if(e.touches && e.touches.length>1){ e.preventDefault(); lockSize(); }
+  // ---- GESTOS: rotación solamente ----
+  let dragging=false, lastX=0,lastY=0;
+  canvas.addEventListener('touchstart',e=>{ if(e.touches.length===1){ dragging=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; } e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    if(dragging && e.touches.length===1){
+      const x=e.touches[0].clientX, y=e.touches[0].clientY;
+      rotY += (x-lastX)*0.01; rotX += (y-lastY)*0.01; rotX=Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX));
+      lastX=x; lastY=y;
+    }
+    // BLOQUEO pinch/gestures
+    if(e.touches.length>1) e.preventDefault();
   }, {passive:false});
+  canvas.addEventListener('touchend',()=>{dragging=false});
+  canvas.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; e.preventDefault();});
+  canvas.addEventListener('mousemove',e=>{if(dragging){ rotY += (e.clientX-lastX)*0.01; rotX += (e.clientY-lastY)*0.01; rotX=Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX)); lastX=e.clientX; lastY=e.clientY; }});
+  ['mouseup','mouseleave'].forEach(ev=>canvas.addEventListener(ev,()=>{dragging=false}));
+  // BLOQUEO zoom/pan del navegador
+  canvas.addEventListener('wheel', e=>e.preventDefault(), {passive:false});
+  ['gesturestart','gesturechange','gestureend','dblclick'].forEach(ev=>canvas.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 
-  // Bloqueo también en “tap to zoom” (si existiera)
-  mv.addEventListener('click', ()=>{ lockSize(); });
-})();
+  function render(){
+    const aspect = canvas.width / canvas.height;
+    const proj = mat4Perspective(fov, aspect, 0.01, 10.0);          // FOV fijo
+    let view = mat4Identity();
+    // cámara en esfera, radio fijo (NO ZOOM)
+    const cam = [ radius*Math.sin(rotY)*Math.cos(rotX),
+                  radius*Math.sin(rotX),
+                  radius*Math.cos(rotY)*Math.cos(rotX) ];
+    view = mat4Translate(view, [-cam[0], -cam[1], -cam[2]]);
+    const model = mat4Identity();
+
+    const mvp = mat4Multiply(proj, view);
+    gl.clearColor(1,1,1,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+    gl.uniformMatrix4fv(uMVP,false,new Float32Array(mvp));
+    gl.uniformMatrix4fv(uModel,false,new Float32Array(model));
+    gl.uniform3fv(uCam,new Float32Array(cam));
+    gl.uniform3fv(uColor,new Float32Array([0.22,0.24,0.28]));
+    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+    requestAnimationFrame(render);
+  }
+  render();
+
+  return { setAngles:(x,y)=>{rotX=x; rotY=y;} };
+}
+
+// “Foto” (canvas superior): render fijo sin gestos
+const hero = startViewer(document.getElementById('hero'), false);
+if(hero){ hero.setAngles(0.5, 0.8); }
+
+// Visor interactivo: solo rotación, sin zoom/pan
+let viewer = null;
+const wrap = document.getElementById('viewerWrap');
+document.getElementById('toggle').addEventListener('click', ()=>{
+  const open = wrap.style.display==='block';
+  wrap.style.display = open ? 'none':'block';
+  if(!open && !viewer){
+    viewer = startViewer(document.getElementById('viewer'), true);
+  }
+  if(!open) wrap.scrollIntoView({behavior:'smooth'});
+});
 </script>
 </body>
 </html>

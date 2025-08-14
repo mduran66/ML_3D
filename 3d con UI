@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AR WebXR con UI custom: Tamaño real + Colores</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  #ui {
+    position: fixed; inset: 0; pointer-events: none;
+    display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .topbar, .bottombar {
+    display:flex; gap:8px; align-items:center; justify-content:center;
+    padding:10px; pointer-events:auto;
+  }
+  .topbar{ justify-content:flex-start }
+  .badge {
+    background: rgba(18,184,134,.12); color:#066a4b; border:1px solid rgba(18,184,134,.35);
+    font-weight:700; padding:8px 12px; border-radius:999px; display:none; backdrop-filter:blur(6px);
+  }
+  .badge.on{ display:inline-flex }
+  .swatches { display:flex; gap:8px; }
+  .swatches button {
+    width:34px; height:34px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 10px rgba(0,0,0,.2);
+    cursor:pointer; outline:none;
+  }
+  .cta {
+    background:#3483fa; color:#fff; border:none; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;
+  }
+  #enter {
+    position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+    background:#000; color:#fff; flex-direction:column; gap:14px;
+  }
+  #enter button { background:#fff; color:#111; padding:12px 16px; border-radius:10px; font-weight:700; border:none; }
+  .hint { font-size:12px; opacity:.8; }
+</style>
+</head>
+<body>
+<div id="enter">
+  <div>Esta demo usa WebXR (Android + Chrome).</div>
+  <div class="hint">Permite zoom libre; cuando llegues al tamaño real aparece el badge.</div>
+  <button id="go">Entrar a AR</button>
+</div>
+
+<!-- UI overlay dentro de la cámara -->
+<div id="ui" hidden>
+  <div class="topbar">
+    <div id="realBadge" class="badge">✅ Tamaño real</div>
+  </div>
+  <div class="bottombar">
+    <div class="swatches">
+      <button data-color="#111111" style="background:#111"></button>
+      <button data-color="#d32f2f" style="background:#d32f2f"></button>
+      <button data-color="#2e7d32" style="background:#2e7d32"></button>
+      <button data-color="#1976d2" style="background:#1976d2"></button>
+    </div>
+    <button class="cta" id="buy">Comprar</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.159/build/three.module.js';
+import { ARButton } from 'https://unpkg.com/three@0.159/examples/jsm/webxr/ARButton.js';
+
+let renderer, scene, camera, reticle, object3D, session;
+let baseScale = 1.0;              // escala 1:1 (calibrable si querés)
+const THRESH = 0.10;              // ±10%
+const ui = document.getElementById('ui');
+const badge = document.getElementById('realBadge');
+
+const btnEnter = document.getElementById('go');
+btnEnter.addEventListener('click', async ()=>{
+  // Setup renderer
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio( Math.min(2, window.devicePixelRatio || 1) );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.xr.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  // Escena básica
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x444444, 1.0));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(1,2,1); scene.add(dir);
+
+  // Objeto “volumen zapatilla” 26×10×8 cm → en metros
+  const geo = new THREE.BoxGeometry(0.26, 0.08, 0.10); // x,y,z
+  const mat = new THREE.MeshStandardMaterial({ color: 0x22262c, metalness:0.5, roughness:0.35 });
+  object3D = new THREE.Mesh(geo, mat);
+  object3D.visible = false;
+  scene.add(object3D);
+
+  // Retícula para posicionar
+  const ring = new THREE.RingGeometry(0.06, 0.07, 32).rotateX(-Math.PI/2);
+  reticle = new THREE.Mesh(ring, new THREE.MeshBasicMaterial({color:0x00c853}));
+  reticle.matrixAutoUpdate = false;
+  reticle.visible = false;
+  scene.add(reticle);
+
+  // WebXR session
+  const btn = ARButton.createButton(renderer, { requiredFeatures:['hit-test', 'dom-overlay'], domOverlay:{root: document.body} });
+  // Oculto el botón nativo; vamos con nuestro flujo
+  btn.style.display = 'none';
+
+  session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures:['hit-test','dom-overlay'], domOverlay:{root: document.body} });
+  renderer.xr.setSession(session);
+
+  // Hit test source
+  const refSpace = await session.requestReferenceSpace('local');
+  const viewerSpace = await session.requestReferenceSpace('viewer');
+  const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+
+  // Mostrar UI overlay
+  document.getElementById('enter').hidden = true;
+  ui.hidden = false;
+
+  // Swatches (cambiar color en vivo)
+  document.querySelectorAll('.swatches button').forEach(b=>{
+    b.addEventListener('click', ()=> {
+      const hex = b.getAttribute('data-color');
+      object3D.material.color.set(hex);
+    });
+  });
+
+  // CTA “Comprar” (ejemplo)
+  document.getElementById('buy').addEventListener('click', ()=>{
+    alert('CTA: llevar a ficha o agregar al carrito');
+  });
+
+  // Gestos: pinch-zoom = cambiar escala del objeto alrededor de su escala base
+  let lastPinch = null;
+  renderer.domElement.addEventListener('touchmove', ev=>{
+    if(ev.touches.length===2){
+      const dx = ev.touches[0].clientX - ev.touches[1].clientX;
+      const dy = ev.touches[0].clientY - ev.touches[1].clientY;
+      const dist = Math.hypot(dx,dy);
+      if(lastPinch!=null){
+        const factor = dist / lastPinch;
+        const s = THREE.MathUtils.clamp(object3D.scale.x * factor, 0.2, 3.0);
+        object3D.scale.setScalar(s);
+      }
+      lastPinch = dist;
+    }
+  }, {passive:true});
+  renderer.domElement.addEventListener('touchend', ()=>{ lastPinch=null; });
+
+  // Calibración opcional: tomamos 1.0 como 1:1 (porque el cubo ya tiene medidas reales en metros).
+  baseScale = 1.0;
+
+  // Render loop con hit-test
+  renderer.setAnimationLoop((t, frame)=>{
+    if(!frame) return;
+    const pose = frame.getViewerPose(refSpace);
+    const results = frame.getHitTestResults(hitTestSource);
+    if(results.length){
+      const hit = results[0];
+      const matPose = hit.getPose(refSpace).transform.matrix;
+      reticle.visible = true;
+      reticle.matrix.fromArray(matPose);
+      if(!object3D.visible){ // colocar al tocar la primera vez
+        // (opcional) podrías auto-colocar si el usuario toca pantalla
+        object3D.position.setFromMatrixPosition(reticle.matrix);
+        object3D.visible = true;
+      }
+    } else {
+      reticle.visible = false;
+    }
+
+    // Lógica de “Tamaño real”
+    if(object3D.visible){
+      const s = object3D.scale.x; // escala uniforme
+      const within = Math.abs(s - baseScale) <= baseScale * THRESH;
+      badge.classList.toggle('on', within);
+    }
+
+    renderer.render(scene, camera);
+  });
+});
+</script>
+</body>
+</html>

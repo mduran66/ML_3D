@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mercado Libre · Mock 3D (escala fija, sin descargas)</title>
+  <title>Mock 3D (escala fija total, sin descargas)</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     :root{ --ml-yellow:#fff159; --ml-blue:#3483fa; --ml-text:#333; --ml-bg:#f5f5f5; }
@@ -24,8 +24,8 @@
     .hint{font-size:12px; color:#666; margin-top:6px;}
     #viewerWrap{ display:none; padding:12px; background:#fafafa; border-top:1px solid #eee; }
     model-viewer{ width:100%; background:#fff; border-radius:12px; --progress-bar-color: var(--ml-blue); }
-    #heroMV{ height:54vh; pointer-events:none; border:1px solid #eee; }   /* “foto” sin controles */
-    #mv{ height:60vh; touch-action: pan-y; } /* evita pinch-zoom del navegador */
+    #heroMV{ height:54vh; pointer-events:none; border:1px solid #eee; }
+    #mv{ height:60vh; touch-action:none; } /* evita pinch del navegador */
     .footer-actions{ display:flex; gap:10px; padding:12px; border-top:1px solid #eee; background:#fff; }
     .footer-actions .btn{ flex:1; }
     @media (min-width:880px){ #heroMV{ height:58vh; } #mv{ height:65vh; } .product-top{ grid-template-columns:1.1fr .9fr; gap:10px; } }
@@ -61,16 +61,14 @@
           <button class="btn btn-primary">Comprar ahora</button>
           <button class="btn btn-secondary" id="toggle3d">👓 Ver en 3D</button>
         </div>
-        <ul class="hint">
-          <li>En 3D **no se puede agrandar/achicar** el objeto (tamaño fijo).</li>
-        </ul>
+        <ul class="hint"><li>No se puede agrandar/achicar: tamaño bloqueado.</li></ul>
       </div>
     </div>
 
     <div id="viewerWrap">
-      <!-- Visor 3D con escala fija: sin zoom, radio bloqueado, FOV bloqueado -->
+      <!-- Visor 3D con escala fija total -->
       <model-viewer id="mv"
-        camera-controls disable-zoom
+        camera-controls disable-zoom disable-pan
         min-camera-orbit="auto auto 1.2m" max-camera-orbit="auto auto 1.2m"
         min-field-of-view="30deg" max-field-of-view="30deg"
         environment-image="neutral" exposure="1.0" shadow-intensity="0.9" autoplay>
@@ -112,14 +110,39 @@
     accessors:[{bufferView:0,byteOffset:0,componentType:5126,count:24,type:"VEC3",min:[-sx,-sy,-sz],max:[sx,sy,sz]},{bufferView:1,byteOffset:0,componentType:5126,count:24,type:"VEC3"},{bufferView:2,byteOffset:0,componentType:5123,count:36,type:"SCALAR"}],
     materials:[{pbrMetallicRoughness:{baseColorFactor:[0.2,0.2,0.22,1],metallicFactor:0.5,roughnessFactor:0.35}}],meshes:[{primitives:[{attributes:{POSITION:0,NORMAL:1},indices:2,material:0}]}],nodes:[{mesh:0}],scenes:[{nodes:[0]}],scene:0};
   const gltfURL=URL.createObjectURL(new Blob([JSON.stringify(gltf)],{type:"model/gltf+json"}));
-  document.getElementById('heroMV').src=gltfURL;
-  const mv=document.getElementById('mv'); mv.src=gltfURL;
 
-  // Cerrar cualquier intento de zoom/resize (por si algún navegador ignora disable-zoom)
-  ['wheel','dblclick'].forEach(evt=>mv.addEventListener(evt, e=>e.preventDefault(), {passive:false}));
+  // asignar a ambos visores
+  document.getElementById('heroMV').src = gltfURL;
+  const mv = document.getElementById('mv');
+  mv.src = gltfURL;
+
+  // === Candados adicionales de tamaño ===
+  const FIX_RADIUS = '1.2m';
+  const FIX_FOV = '30deg';
+
+  // Aplica valores fijos
+  function lockSize() {
+    const o = mv.getCameraOrbit();
+    mv.cameraOrbit = `${o.theta} ${o.phi} ${FIX_RADIUS}`;
+    mv.fieldOfView = FIX_FOV;
+  }
+
+  // Bloquea cambios cada vez que el usuario intenta interactuar
+  mv.addEventListener('camera-change', lockSize);
+  mv.addEventListener('load', lockSize);
+
+  // Cancela gestos que algunos navegadores usan para “quick zoom”
+  ['wheel','dblclick','gesturestart','gesturechange','gestureend'].forEach(evt=>{
+    mv.addEventListener(evt, e=>{ e.preventDefault(); lockSize(); }, {passive:false});
+  });
+
+  // Pinch de 2 dedos → cancelar y restaurar
   mv.addEventListener('touchmove', e=>{
-    if(e.touches && e.touches.length>1){ e.preventDefault(); }
+    if(e.touches && e.touches.length>1){ e.preventDefault(); lockSize(); }
   }, {passive:false});
+
+  // Bloqueo también en “tap to zoom” (si existiera)
+  mv.addEventListener('click', ()=>{ lockSize(); });
 })();
 </script>
 </body>
